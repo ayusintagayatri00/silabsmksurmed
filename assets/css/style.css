@@ -1,0 +1,68 @@
+/* Custom Styling untuk SILAB SMK Kesehatan */
+:root {
+    --primary-color: #0d9488;
+    --primary-dark: #0f766e;
+    --sidebar-width: 260px;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: var(--sidebar-width);
+    transition: all 0.3s ease-in-out;
+}
+
+.sidebar-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: #94a3b8;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.sidebar-menu-item:hover,
+.sidebar-menu-item.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+/* Badge Multi-role */
+.badge-role-admin {
+    background-color: #ef4444;
+    color: #fff;
+}
+
+.badge-role-laboran {
+    background-color: #0d9488;
+    color: #fff;
+}
+
+.badge-role-guru {
+    background-color: #3b82f6;
+    color: #fff;
+}
+
+.badge-role-siswa {
+    background-color: #8b5cf6;
+    color: #fff;
+}
+
+.badge-role-kepsek {
+    background-color: #f59e0b;
+    color: #fff;
+}
+
+/* Table Styling */
+.table-custom th {
+    background-color: #f1f5f9;
+    color: #475569;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
