@@ -175,9 +175,11 @@ class Pengadaan extends CI_Controller
     public function detail($id)
     {
         $data['title'] = 'Detail Pengadaan Alat & BHP';
-
-        // Tanpa JOIN ke tb_user
-        $this->db->where('id_pengadaan', $id);
+        // fix query untuk menampilkan detail pengadaan beserta nama pengaju dari tabel tb_users
+        $this->db->select('tb_pengadaan.*, tb_user.nama_lengkap as nama_pengaju');
+        $this->db->from('tb_pengadaan');
+        $this->db->join('tb_user', 'tb_user.id_user = tb_pengadaan.id_pengaju', 'left');
+        $this->db->where('tb_pengadaan.id_pengadaan', $id);
         $data['pengadaan'] = $this->db->get('tb_pengadaan')->row_array();
 
         if (!$data['pengadaan']) {
