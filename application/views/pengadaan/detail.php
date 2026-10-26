@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 font-medium">Pengaju</p>
-                    <p class="font-medium text-slate-700 mt-1"><?= !empty($pengadaan['nama_pengaju']) ? $pengadaan['nama_pengaju'] : 'Administrator Lab'; ?></p>
+                    <p class="font-medium text-slate-700 mt-1"><?= html_escape($pengadaan['nama_pengaju'] ?? 'Pengaju tidak ditemukan'); ?></p> <!-- Tampilkan nama pengaju atau pesan jika tidak ditemukan -->
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 font-medium">Tanggal Dibuat</p>
