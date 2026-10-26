@@ -7,6 +7,13 @@ class User extends CI_Controller
     public function __construct()
     {
         parent::__construct();
+		//fix hak akses user bocor
+        if (!$this->session->userdata('logged_in')) {
+            redirect('auth');
+        }
+        if ($this->session->userdata('role') !== 'admin') {
+            show_error('Akses ditolak!', 403, 'Forbidden');
+        }
         $this->load->model('M_User');
         $this->load->library('form_validation');
     }
