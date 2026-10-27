@@ -91,7 +91,8 @@
                     <label class="block text-xs font-bold text-slate-700 mb-2">
                         JUMLAH STOK <span class="text-rose-500">*</span>
                     </label>
-                    <input type="number" min="0" name="stok" value="<?= set_value('stok', $barang->stok); ?>" required
+                    <!-- Input type number with min=0 and step=1 to ensure only non-negative integers are entered -->
+                    <input type="number" min="0" step="1" name="stok" value="<?= set_value('stok', $barang->stok); ?>" required
                         class="w-full px-3.5 py-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-slate-800 font-semibold">
                 </div>
 

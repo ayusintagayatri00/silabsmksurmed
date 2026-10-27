@@ -77,7 +77,8 @@
                     <label class="block text-xs font-bold text-slate-700 mb-2">
                         JUMLAH STOK <span class="text-rose-500">*</span>
                     </label>
-                    <input type="number" min="0" name="stok" value="<?= set_value('stok', 1); ?>" required
+                    <!-- Input type number with minimum value of 0 and step of 1 for stock quantity -->
+                    <input type="number" min="0" step="1" name="stok" value="<?= set_value('stok', 1); ?>" required
                         class="w-full px-3.5 py-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-slate-800">
                 </div>
 

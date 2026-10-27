@@ -198,12 +198,28 @@ class Peminjaman extends CI_Controller
 
         $data['title'] = 'Pinjam Alat Baru';
 
-        // Generate Kode Peminjaman Otomatis (Format: PJM-YYYYMMDD-001)
-        $today = date('Ymd');
-        $this->db->like('kode_peminjaman', 'PJM-' . $today, 'after');
-        $last_code = $this->db->get('tb_peminjaman')->num_rows();
-        $next_no = sprintf('%03d', $last_code + 1);
-        $data['kode_peminjaman'] = 'PJM-' . $today . '-' . $next_no;
+        //old  Generate Kode Peminjaman Otomatis (Format: PJM-YYYYMMDD-001) dihapus karena bug: kode unik per hari tidak dijamin, dan nomor urut tidak reset setiap hari
+        // fix bug: pastikan kode unik per hari, dan reset nomor urut setiap hari
+        $prefix = 'PJM-' . date('Ymd') . '-';
+
+        $kode_hari_ini = $this->db
+            ->select('kode_peminjaman')
+            ->like('kode_peminjaman', $prefix, 'after')
+            ->get('tb_peminjaman')
+            ->result_array();
+
+        $nomor_terakhir = 0;
+
+        foreach ($kode_hari_ini as $baris) {
+            $nomor = substr($baris['kode_peminjaman'], strlen($prefix));
+
+            if (ctype_digit($nomor)) {
+                $nomor_terakhir = max($nomor_terakhir, (int) $nomor);
+            }
+        }
+
+        $data['kode_peminjaman'] = $prefix
+            . sprintf('%03d', $nomor_terakhir + 1);
 
         // Ambil data barang yang stoknya > 0
         $this->db->where('stok >', 0);
@@ -218,12 +234,67 @@ class Peminjaman extends CI_Controller
     // Proses Simpan Peminjaman
     public function simpan()
     {
+        //fix proteksi role agar hanya admin, laboran, guru yang bisa mengajukan peminjaman
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules(
+            'kode_peminjaman',
+            'Kode Peminjaman',
+            'required|trim|max_length[30]|is_unique[tb_peminjaman.kode_peminjaman]',
+            [
+                'is_unique' => 'Kode peminjaman sudah digunakan. Muat ulang formulir.'
+            ]
+        );
+
+        $this->form_validation->set_rules(
+            'id_barang',
+            'Barang',
+            'required|integer|greater_than[0]'
+        );
+
+        $this->form_validation->set_rules(
+            'jumlah_pinjam',
+            'Jumlah Pinjam',
+            'required|integer|greater_than[0]',
+            [
+                'integer' => 'Jumlah pinjam harus berupa bilangan bulat.',
+                'greater_than' => 'Jumlah pinjam minimal 1.'
+            ]
+        );
+
+        $this->form_validation->set_rules(
+            'tgl_pinjam',
+            'Tanggal Pinjam',
+            'required'
+        );
+
+        $this->form_validation->set_rules(
+            'tgl_kembali_rencana',
+            'Rencana Kembali',
+            'required'
+        );
+
+        if (!$this->form_validation->run()) {
+            $this->session->set_flashdata('error', validation_errors());
+            redirect('peminjaman');
+            return;
+        }
+
+        $barang = $this->db->get_where(
+            'tb_inventaris',
+            ['id_barang' => (int) $this->input->post('id_barang')]
+        )->row_array();
+
+        if (!$barang) {
+            $this->session->set_flashdata('error', 'Barang tidak ditemukan.');
+            redirect('peminjaman');
+            return;
+        }
         // Ambil data dari form input
         $data = [
-            'kode_peminjaman'       => $this->input->post('kode_peminjaman'),
+            'kode_peminjaman'       => trim((string)$this->input->post('kode_peminjaman')), //fix casting ke string
             'id_user'               => $this->session->userdata('id_user'), // ID akun yang login
-            'id_barang'             => $this->input->post('id_barang'),
-            'jumlah_pinjam'         => $this->input->post('jumlah_pinjam') ?? 1,
+            'id_barang'             => (int)$this->input->post('id_barang'), //fix casting ke integer
+            'jumlah_pinjam'         => (int)$this->input->post('jumlah_pinjam') ?? 1, // fix casting ke integer, default 1 jika null
             'tgl_pinjam'            => $this->input->post('tgl_pinjam') ?: date('Y-m-d H:i:s'),
             'tgl_kembali_rencana'   => $this->input->post('tgl_kembali_rencana'),
 
@@ -235,8 +306,31 @@ class Peminjaman extends CI_Controller
         ];
 
         $this->db->insert('tb_peminjaman', $data);
+        // Cek apakah insert berhasil
+        $db_debug_lama = $this->db->db_debug;
+        $this->db->db_debug = false;
 
-        $this->session->set_flashdata('success', 'Pengajuan peminjaman berhasil dibuat, menunggu persetujuan Laboran.');
+        try {
+            $tersimpan = $this->db->insert('tb_peminjaman', $data);
+            $error_db = $this->db->error();
+        } finally {
+            $this->db->db_debug = $db_debug_lama;
+        }
+
+        if (!$tersimpan) {
+            $pesan = (int) $error_db['code'] === 1062
+                ? 'Kode peminjaman sudah digunakan. Muat ulang formulir.'
+                : 'Pengajuan gagal disimpan. Silakan coba lagi.';
+
+            $this->session->set_flashdata('error', $pesan);
+            redirect('peminjaman');
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'success',
+            'Pengajuan berhasil dibuat, menunggu persetujuan Laboran.'
+        );
         redirect('peminjaman');
     }
 

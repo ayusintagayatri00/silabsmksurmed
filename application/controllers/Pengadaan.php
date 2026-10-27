@@ -177,6 +177,40 @@ class Pengadaan extends CI_Controller
             show_error('Metode permintaan tidak diizinkan.', 405);
             return;
         }
+        // pembetulan validasi form pengajuan pengadaan
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules(
+            'nama_item', 'Nama Item',
+            'required|trim|max_length[150]'
+        );
+
+        $this->form_validation->set_rules(
+            'jumlah', 'Jumlah',
+            'required|integer|greater_than[0]'
+        );
+
+        $this->form_validation->set_rules(
+            'satuan', 'Satuan',
+            'required|trim|max_length[30]'
+        );
+
+        $this->form_validation->set_rules(
+            'estimasi_harga', 'Estimasi Harga',
+            'required|numeric|greater_than_equal_to[0]'
+        );
+
+        $this->form_validation->set_rules(
+            'alasan_pengadaan', 'Alasan Pengadaan',
+            'required|trim'
+        );
+
+        if (!$this->form_validation->run()) {
+            $this->session->set_flashdata('error', validation_errors());
+            redirect('pengadaan');
+            return;
+        }
+
+
         $data_insert = [
             'nama_item'        => $this->input->post('nama_item', true),
             'jumlah'           => (int)$this->input->post('jumlah', true),
@@ -224,6 +258,34 @@ class Pengadaan extends CI_Controller
         if (!in_array($role_user, ['admin', 'laboran', 'kepsek'])) {
             $this->session->set_flashdata('error', 'Anda tidak memiliki hak akses untuk menyetujui pengajuan ini!');
             redirect(site_url('pengadaan'));
+            return;
+        }
+        // perbaikan validasi metode permintaan untuk update status approval
+        if ($this->input->method() !== 'post') {
+            show_error('Metode permintaan tidak diizinkan.', 405);
+            return;
+        }
+
+        $this->load->library('form_validation');
+
+        $this->form_validation->set_rules(
+            'id_pengadaan',
+            'ID Pengadaan',
+            'required|integer|greater_than[0]'
+        );
+
+        $this->form_validation->set_rules(
+            'status_approval',
+            'Status Approval',
+            'required|in_list[Pending,Disetujui,Ditolak]',
+            [
+                'in_list' => 'Status approval tidak valid.'
+            ]
+        );
+
+        if (!$this->form_validation->run()) {
+            $this->session->set_flashdata('error', validation_errors());
+            redirect('pengadaan');
             return;
         }
 

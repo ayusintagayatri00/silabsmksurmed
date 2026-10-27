@@ -151,7 +151,17 @@ class Inventaris extends CI_Controller
         $this->form_validation->set_rules('kode_barcode', 'Kode Barcode', 'required|trim|is_unique[tb_inventaris.kode_barcode]');
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('kategori', 'Kategori', 'required|trim');
-        $this->form_validation->set_rules('stok', 'Stok', 'required|numeric');
+        //fix Validasi Stok agar tidak menerima nilai negatif
+        $this->form_validation->set_rules(
+            'stok',
+            'Stok',
+            'required|integer|greater_than_equal_to[0]',
+            [
+                'required' => 'Stok wajib diisi.',
+                'integer' => 'Stok harus berupa bilangan bulat.',
+                'greater_than_equal_to' => 'Stok tidak boleh negatif.'
+            ]
+        );
         $this->form_validation->set_rules('satuan', 'Satuan', 'required|trim');
         // fix Validasi Kondisi Barang
         $this->form_validation->set_rules(
@@ -264,7 +274,17 @@ class Inventaris extends CI_Controller
         $this->form_validation->set_rules('kode_barcode', 'Kode Barcode', 'required|trim' . $is_unique);
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('kategori', 'Kategori', 'required|trim');
-        $this->form_validation->set_rules('stok', 'Stok', 'required|numeric');
+        // fix Validasi Stok agar tidak menerima nilai negatif
+        $this->form_validation->set_rules(
+            'stok',
+            'Stok',
+            'required|integer|greater_than_equal_to[0]',
+            [
+                'required' => 'Stok wajib diisi.',
+                'integer' => 'Stok harus berupa bilangan bulat.',
+                'greater_than_equal_to' => 'Stok tidak boleh negatif.'
+            ]
+        );
         $this->form_validation->set_rules('satuan', 'Satuan', 'required|trim');
         // fix Validasi kondisi barang dengan daftar pilihan yang valid
         $this->form_validation->set_rules(
