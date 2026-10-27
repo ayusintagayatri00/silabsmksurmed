@@ -34,6 +34,11 @@
     <!-- Form Container -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-3xl">
         <form action="<?= base_url('peminjaman/update'); ?>" method="POST" class="space-y-5">
+            <!-- penambahan CSRF Token -->
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
             <!-- hapus pembacaan manual, sekarang ambil dari database -->
             <input type="hidden" name="id_peminjaman" value="<?= $peminjaman['id_peminjaman']; ?>">
 

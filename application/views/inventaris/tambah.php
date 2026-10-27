@@ -23,6 +23,11 @@
         <?php endif; ?>
 
         <form action="<?= site_url('inventaris/simpan'); ?>" method="POST" class="space-y-5">
+            <!-- penambahan CSRF Token -->
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
             <input type="hidden" name="jenis" value="<?= $jenis; ?>">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">

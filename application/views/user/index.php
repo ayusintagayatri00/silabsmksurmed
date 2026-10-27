@@ -100,6 +100,11 @@
             <button type="button" onclick="closeModal('modalTambah')" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
         </div>
         <form action="<?= site_url('user/tambah'); ?>" method="post" class="p-6 space-y-4">
+            <!-- penambahan CSRF Token -->
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <input type="text" name="username" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none" placeholder="Masukkan username" required>
@@ -162,6 +167,11 @@
                 <button type="button" onclick="closeModal('modalEdit<?= $u['id_user']; ?>')" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
             </div>
             <form action="<?= site_url('user/edit'); ?>" method="post" class="p-6 space-y-4">
+                <!-- penambahan CSRF Token -->
+                <input
+                    type="hidden"
+                    name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                    value="<?= html_escape($this->security->get_csrf_hash()); ?>">
                 <input type="hidden" name="id_user" value="<?= $u['id_user']; ?>">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>

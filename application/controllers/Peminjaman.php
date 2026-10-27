@@ -305,8 +305,7 @@ class Peminjaman extends CI_Controller
             'created_at'            => date('Y-m-d H:i:s')
         ];
 
-        $this->db->insert('tb_peminjaman', $data);
-        // Cek apakah insert berhasil
+        // insert data dan Cek apakah insert berhasil
         $db_debug_lama = $this->db->db_debug;
         $this->db->db_debug = false;
 

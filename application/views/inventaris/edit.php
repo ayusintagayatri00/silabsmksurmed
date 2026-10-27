@@ -26,6 +26,11 @@
         <?php endif; ?>
 
         <form action="<?= site_url('inventaris/update'); ?>" method="POST" class="space-y-5">
+            <!-- penambahan CSRF Token -->
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
             <!-- Hidden Keys -->
             <input type="hidden" name="id_barang" value="<?= $barang->id_barang; ?>">
             <input type="hidden" name="jenis" value="<?= $jenis; ?>">
