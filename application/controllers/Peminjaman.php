@@ -285,56 +285,178 @@ class Peminjaman extends CI_Controller
         $this->load->view('templates/footer');
     }
 
-    // Proses Simpan Update Peminjaman
+    // fix perhitungan stok pada edit Peminjaman
     public function update()
-    {
-        $id_peminjaman = $this->input->post('id_peminjaman', true);
-        $id_barang_lama = $this->input->post('id_barang_lama', true);
-        $jumlah_lama = (int)$this->input->post('jumlah_lama', true);
+{
+    if (!in_array($this->session->userdata('role'), ['admin', 'laboran'], true)) {
+        show_error('Akses ditolak!', 403, 'Forbidden');
+    }
 
-        $id_barang_baru = $this->input->post('id_barang', true);
-        $jumlah_baru = (int)$this->input->post('jumlah_pinjam', true);
-        $status_baru = $this->input->post('status', true);
+    $this->load->library('form_validation');
+    $this->form_validation->set_rules(
+        'id_peminjaman', 'ID Peminjaman',
+        'required|integer|greater_than[0]'
+    );
+    $this->form_validation->set_rules(
+        'id_barang', 'Barang',
+        'required|integer|greater_than[0]'
+    );
+    $this->form_validation->set_rules(
+        'jumlah_pinjam', 'Jumlah Pinjam',
+        'required|integer|greater_than[0]'
+    );
+    $this->form_validation->set_rules(
+        'status', 'Status',
+        'required|in_list[Pending,Disetujui,Ditolak,Dipinjam,Dikembalikan]'
+    );
+    $this->form_validation->set_rules(
+        'tgl_pinjam', 'Tanggal Pinjam', 'required'
+    );
+    $this->form_validation->set_rules(
+        'tgl_kembali_rencana', 'Rencana Kembali', 'required'
+    );
 
-        // Kembalikan dulu stok barang lama
-        $barang_lama = $this->db->get_where('tb_inventaris', ['id_barang' => $id_barang_lama])->row_array();
-        if ($barang_lama) {
-            $this->db->where('id_barang', $id_barang_lama);
-            $this->db->update('tb_inventaris', ['stok' => $barang_lama['stok'] + $jumlah_lama]);
-        }
-
-        // Ambil data barang baru & potong stok jika status masih 'Dipinjam'
-        $barang_baru = $this->db->get_where('tb_inventaris', ['id_barang' => $id_barang_baru])->row_array();
-
-        if ($status_baru == 'Dipinjam') {
-            if ($barang_baru && $barang_baru['stok'] >= $jumlah_baru) {
-                $this->db->where('id_barang', $id_barang_baru);
-                $this->db->update('tb_inventaris', ['stok' => $barang_baru['stok'] - $jumlah_baru]);
-            } else {
-                $this->session->set_flashdata('error', 'Gagal update! Stok barang tidak mencukupi.');
-                redirect('peminjaman/edit/' . $id_peminjaman);
-                return;
-            }
-        }
-
-        // Update data transaksi
-        $data_update = [
-            'id_barang'             => $id_barang_baru,
-            'jumlah_pinjam'         => $jumlah_baru,
-            'tgl_pinjam'            => $this->input->post('tgl_pinjam', true),
-            'tgl_kembali_rencana'   => $this->input->post('tgl_kembali_rencana', true),
-            'tgl_kembali_realisasi' => ($status_baru == 'Dikembalikan') ? date('Y-m-d H:i:s') : null,
-            'status'                => $status_baru,
-            'catatan'               => $this->input->post('catatan', true),
-            'updated_at'            => date('Y-m-d H:i:s')
-        ];
-
-        $this->db->where('id_peminjaman', $id_peminjaman);
-        $this->db->update('tb_peminjaman', $data_update);
-
-        $this->session->set_flashdata('success', 'Data peminjaman berhasil diperbarui!');
+    if (!$this->form_validation->run()) {
+        $this->session->set_flashdata(
+            'error', strip_tags(validation_errors())
+        );
         redirect('peminjaman');
     }
+
+    $id = (int) $this->input->post('id_peminjaman');
+    $id_barang_baru = (int) $this->input->post('id_barang');
+    $jumlah_baru = (int) $this->input->post('jumlah_pinjam');
+    $status_baru = $this->input->post('status');
+
+    $lama = $this->db->get_where(
+        'tb_peminjaman', ['id_peminjaman' => $id]
+    )->row_array();
+
+    if (!$lama || (int) $lama['jumlah_pinjam'] <= 0) {
+        $this->session->set_flashdata(
+            'error', 'Data peminjaman tidak ditemukan atau tidak valid.'
+        );
+        redirect('peminjaman');
+    }
+
+    $transisi = [
+        'Pending' => ['Pending', 'Disetujui', 'Ditolak', 'Dipinjam'],
+        'Disetujui' => ['Disetujui', 'Ditolak', 'Dipinjam'],
+        'Dipinjam' => ['Dipinjam', 'Dikembalikan'],
+        'Ditolak' => ['Ditolak'],
+        'Dikembalikan' => ['Dikembalikan']
+    ];
+
+    $status_lama = $lama['status'];
+    $id_barang_lama = (int) $lama['id_barang'];
+    $jumlah_lama = (int) $lama['jumlah_pinjam'];
+
+    if (!in_array($status_baru, $transisi[$status_lama] ?? [], true)) {
+        $this->session->set_flashdata(
+            'error', 'Perubahan status tidak diperbolehkan.'
+        );
+        redirect('peminjaman');
+    }
+
+    $barang_atau_jumlah_berubah =
+        $id_barang_baru !== $id_barang_lama ||
+        $jumlah_baru !== $jumlah_lama;
+
+    if (
+        $barang_atau_jumlah_berubah &&
+        (
+            in_array($status_lama, ['Ditolak', 'Dikembalikan'], true) ||
+            $status_baru === 'Dikembalikan'
+        )
+    ) {
+        $this->session->set_flashdata(
+            'error',
+            'Barang dan jumlah tidak boleh diubah saat pengembalian '
+            . 'atau pada transaksi yang sudah selesai.'
+        );
+        redirect('peminjaman');
+    }
+
+    $data_update = [
+        'id_barang' => $id_barang_baru,
+        'jumlah_pinjam' => $jumlah_baru,
+        'tgl_pinjam' => $this->input->post('tgl_pinjam', true),
+        'tgl_kembali_rencana' =>
+            $this->input->post('tgl_kembali_rencana', true),
+        'tgl_kembali_realisasi' =>
+            $status_baru === 'Dikembalikan'
+                ? ($lama['tgl_kembali_realisasi'] ?: date('Y-m-d H:i:s'))
+                : null,
+        'status' => $status_baru,
+        'catatan' => $this->input->post('catatan', true),
+        'updated_at' => date('Y-m-d H:i:s')
+    ];
+
+    $this->db->trans_begin();
+
+    // Tolak penyimpanan jika keadaan stok transaksi sudah berubah.
+    $tersimpan = $this->db
+        ->where('id_peminjaman', $id)
+        ->where('status', $status_lama)
+        ->where('id_barang', $id_barang_lama)
+        ->where('jumlah_pinjam', $jumlah_lama)
+        ->update('tb_peminjaman', $data_update);
+
+    if (!$tersimpan || $this->db->affected_rows() !== 1) {
+        $this->db->trans_rollback();
+        $this->session->set_flashdata(
+            'error',
+            'Tidak ada perubahan tersimpan atau transaksi sudah berubah. '
+            . 'Muat ulang data sebelum mengedit.'
+        );
+        redirect('peminjaman');
+    }
+
+    $stok_ok = true;
+
+    if ($status_lama === 'Dipinjam') {
+        $stok_ok = $this->db
+            ->set('stok', 'stok + ' . $jumlah_lama, false)
+            ->where('id_barang', $id_barang_lama)
+            ->update('tb_inventaris');
+
+        $stok_ok = $stok_ok && $this->db->affected_rows() === 1;
+    }
+
+    if ($stok_ok && $status_baru === 'Dipinjam') {
+        $this->db
+            ->set('stok', 'stok - ' . $jumlah_baru, false)
+            ->where('id_barang', $id_barang_baru)
+            ->where('stok >=', $jumlah_baru);
+
+        if (
+            $status_lama !== 'Dipinjam' ||
+            $id_barang_baru !== $id_barang_lama ||
+            $jumlah_baru > $jumlah_lama
+        ) {
+            $this->db->where('kondisi', 'Baik');
+        }
+
+        $stok_ok = $this->db->update('tb_inventaris');
+        $stok_ok = $stok_ok && $this->db->affected_rows() === 1;
+    }
+
+    if (!$stok_ok || $this->db->trans_status() === false) {
+        $this->db->trans_rollback();
+        $this->session->set_flashdata(
+            'error',
+            'Perubahan dibatalkan. Periksa ketersediaan dan kondisi barang.'
+        );
+        redirect('peminjaman');
+    }
+
+    $this->db->trans_commit();
+    $this->session->set_flashdata(
+        'success', 'Data peminjaman berhasil diperbarui!'
+    );
+    redirect('peminjaman');
+}
+
 
     // =======================================================
     // METHOD BARU: EXPORT DATA PEMINJAMAN ALAT KE EXCEL
@@ -392,18 +514,38 @@ class Peminjaman extends CI_Controller
 
         // Eksekusi perubahan status dan stok
         $hasil = $this->M_Peminjaman->proses_approval($id_peminjaman, $status_decode);
+        // fix pembacaan hasil di controller agar menampilkan pesan error yang sesuai
+        $pesan_error = [
+            'data_tidak_valid' =>
+                'Data peminjaman tidak ditemukan atau jumlahnya tidak valid.',
+            'transisi_tidak_valid' =>
+                'Perubahan status tidak diperbolehkan. '
+                . 'Pinjaman aktif harus diproses melalui pengembalian.',
+            'tidak_berubah' =>
+                'Status sudah sama. Tidak ada perubahan stok.',
+            'data_berubah' =>
+                'Data transaksi sudah berubah. Muat ulang halaman.',
+            'stok_atau_kondisi' =>
+                'Gagal menyetujui! Stok tidak mencukupi '
+                . 'atau kondisi barang bukan Baik.'
+        ];
 
-        if ($hasil === 'stok_habis') {
-            $this->session->set_flashdata('error', 'Gagal menyetujui! Stok alat medis tidak mencukupi.');
-        } elseif ($hasil) {
-            $this->session->set_flashdata('success', 'Status peminjaman berhasil diperbarui menjadi ' . $status_decode . '.');
+        if ($hasil === true) {
+            $this->session->set_flashdata(
+                'success',
+                'Status peminjaman berhasil diperbarui menjadi '
+                . $status_decode . '.'
+            );
         } else {
-            $this->session->set_flashdata('error', 'Terjadi kesalahan sistem saat memperbarui status.');
+            $pesan = is_string($hasil)
+                ? ($pesan_error[$hasil] ?? 'Gagal memperbarui peminjaman.')
+                : 'Terjadi kesalahan saat memperbarui peminjaman.';
+
+            $this->session->set_flashdata('error', $pesan);
         }
 
         redirect('peminjaman');
     }
-    //==================================================================================
 
     // =======================================================
     // METHOD HAPUS DATA PEMINJAMAN ALAT

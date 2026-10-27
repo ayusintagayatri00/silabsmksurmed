@@ -38,7 +38,8 @@
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 font-medium">Pengaju</p>
-                    <p class="font-medium text-slate-700 mt-1"><?= html_escape($pengadaan['nama_pengaju'] ?? 'Pengaju tidak ditemukan'); ?></p> <!-- Tampilkan nama pengaju atau pesan jika tidak ditemukan -->
+                    <!-- Tampilkan nama pengaju atau pesan jika tidak ditemukan -->
+                    <p class="font-medium text-slate-700 mt-1"><?= html_escape($pengadaan['nama_pengaju'] ?? 'Pengaju tidak ditemukan'); ?></p> 
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 font-medium">Tanggal Dibuat</p>
