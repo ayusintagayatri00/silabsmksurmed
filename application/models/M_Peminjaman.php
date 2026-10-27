@@ -136,42 +136,105 @@ class M_Peminjaman extends CI_Model
     // Update status transaksi sekaligus sinkronisasi stok inventaris
     public function proses_approval($id_peminjaman, $status_baru)
     {
-        // 1. Ambil data detail transaksi
-        $peminjaman = $this->db->get_where('tb_peminjaman', ['id_peminjaman' => $id_peminjaman])->row();
-        if (!$peminjaman) {
+        $status_valid = ['Dipinjam', 'Ditolak', 'Dikembalikan'];
+
+        if (!in_array($status_baru, $status_valid, true)) {
+            return 'transisi_tidak_valid';
+        }
+
+        $peminjaman = $this->db->get_where(
+            'tb_peminjaman',
+            ['id_peminjaman' => $id_peminjaman]
+        )->row_array();
+
+        if (!$peminjaman || (int) $peminjaman['jumlah_pinjam'] <= 0) {
+            return 'data_tidak_valid';
+        }
+
+        $status_lama = $peminjaman['status'];
+        $id_barang = (int) $peminjaman['id_barang'];
+        $jumlah = (int) $peminjaman['jumlah_pinjam'];
+
+        if ($status_baru === $status_lama) {
+            return 'tidak_berubah';
+        }
+
+        $transisi = [
+            'Pending' => ['Dipinjam', 'Ditolak'],
+            'Disetujui' => ['Dipinjam', 'Ditolak'],
+            'Dipinjam' => ['Dikembalikan'],
+            'Ditolak' => [],
+            'Dikembalikan' => []
+        ];
+
+        if (!in_array($status_baru, $transisi[$status_lama] ?? [], true)) {
+            return 'transisi_tidak_valid';
+        }
+
+        $data_update = [
+            'status' => $status_baru,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($status_baru === 'Dikembalikan') {
+            $data_update['tgl_kembali_realisasi'] = date('Y-m-d H:i:s');
+        } else {
+            $data_update['tgl_kembali_realisasi'] = null;
+        }
+
+        if (!$this->db->trans_begin()) {
             return false;
         }
 
-        $id_barang     = $peminjaman->id_barang;
-        $jumlah_pinjam = (int) ($peminjaman->jumlah_pinjam ?? 1);
-        $status_lama   = $peminjaman->status;
+        // Cegah pemrosesan ulang jika transaksi berubah sejak dibaca.
+        $tersimpan = $this->db
+            ->where('id_peminjaman', $id_peminjaman)
+            ->where('status', $status_lama)
+            ->where('id_barang', $id_barang)
+            ->where('jumlah_pinjam', $jumlah)
+            ->update('tb_peminjaman', $data_update);
 
-        // 2. Logika Pemotongan & Penambahan Stok Inventaris
-        if ($status_baru === 'Dipinjam' && $status_lama !== 'Dipinjam') {
-            // Cek ketersediaan stok inventaris terlebih dahulu
-            $barang = $this->db->get_where('tb_inventaris', ['id_barang' => $id_barang])->row();
-            if (!$barang || $barang->stok < $jumlah_pinjam) {
-                return 'stok_habis';
+        if (!$tersimpan || $this->db->affected_rows() !== 1) {
+            $this->db->trans_rollback();
+            return 'data_berubah';
+        }
+
+        $stok_ok = true;
+
+        if ($status_baru === 'Dipinjam') {
+            $stok_ok = $this->db
+                ->set('stok', 'stok - ' . $jumlah, false)
+                ->where('id_barang', $id_barang)
+                ->where('kondisi', 'Baik')
+                ->where('stok >=', $jumlah)
+                ->update('tb_inventaris');
+
+            $stok_ok = $stok_ok && $this->db->affected_rows() === 1;
+
+            if (!$stok_ok) {
+                $this->db->trans_rollback();
+                return 'stok_atau_kondisi';
             }
-            // Kurangi stok alat
-            $this->db->set('stok', 'stok - ' . $jumlah_pinjam, FALSE);
-            $this->db->where('id_barang', $id_barang);
-            $this->db->update('tb_inventaris');
-        } elseif ($status_baru === 'Dikembalikan' && $status_lama === 'Dipinjam') {
-            // Tambahkan kembali stok saat alat dikembalikan
-            $this->db->set('stok', 'stok + ' . $jumlah_pinjam, FALSE);
-            $this->db->where('id_barang', $id_barang);
-            $this->db->update('tb_inventaris');
+        } elseif ($status_baru === 'Dikembalikan') {
+            $stok_ok = $this->db
+                ->set('stok', 'stok + ' . $jumlah, false)
+                ->where('id_barang', $id_barang)
+                ->update('tb_inventaris');
+
+            $stok_ok = $stok_ok && $this->db->affected_rows() === 1;
         }
 
-        // 3. Update status peminjaman di database
-        $update_data = ['status' => $status_baru];
-        if ($status_baru === 'Dikembalikan') {
-            $update_data['tgl_kembali_realisasi'] = date('Y-m-d H:i:s');
+        if (!$stok_ok || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return false;
         }
 
-        $this->db->where('id_peminjaman', $id_peminjaman);
-        return $this->db->update('tb_peminjaman', $update_data);
+        if (!$this->db->trans_commit()) {
+            $this->db->trans_rollback();
+            return false;
+        }
+
+        return true;
     }
     //=================================================================================
 }
