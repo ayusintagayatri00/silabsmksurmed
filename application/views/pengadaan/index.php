@@ -142,9 +142,22 @@
                                             <a href="<?= site_url('pengadaan/edit/' . $id_pengadaan); ?>" class="text-amber-500 hover:text-amber-600 p-1.5 transition rounded-lg hover:bg-amber-50" title="Edit / Approval">
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
-                                            <a href="<?= site_url('pengadaan/delete/' . $id_pengadaan); ?>" onclick="return confirm('Yakin ingin menghapus data pengadaan ini?')" class="text-rose-500 hover:text-rose-600 p-1.5 transition rounded-lg hover:bg-rose-50" title="Hapus">
+                                           <form
+                                            action="<?= site_url('pengadaan/hapus/' . (int) $id_pengadaan); ?>"
+                                            method="post"
+                                            class="inline"
+                                            onsubmit="return confirm('Yakin ingin menghapus pengadaan ini?');">
+                                            <input
+                                                type="hidden"
+                                                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                                                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
+                                            <button
+                                                type="submit"
+                                                title="Hapus"
+                                                class="text-rose-500 hover:text-rose-600 p-1.5 rounded-lg">
                                                 <i class="fa-solid fa-trash-can"></i>
-                                            </a>
+                                            </button>
+                                        </form>
                                         <?php endif; ?>
                                     </div>
                                 </td>

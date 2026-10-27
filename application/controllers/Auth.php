@@ -38,6 +38,18 @@ class Auth extends CI_Controller
         if ($user) {
             // fix password universal
             if (password_verify($password, $user->password)) {
+                //fix validasi status aktif user
+                if ((int) $user->status_aktif !== 1) {
+                $this->session->set_flashdata(
+                    'error',
+                    'Akun Anda tidak aktif. Hubungi administrator.'
+                );
+
+                redirect('auth');
+                return;
+            }
+
+            $this->session->sess_regenerate(TRUE);
 
                 // Set session
                 $session_data = array(

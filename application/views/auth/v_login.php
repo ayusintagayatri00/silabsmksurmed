@@ -17,6 +17,10 @@
         </div>
 
         <form action="<?= base_url('auth/login_process') ?>" method="POST" class="p-6 space-y-4">
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
             <?php if ($this->session->flashdata('error')): ?>
                 <div class="p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-xs">
                     <?= $this->session->flashdata('error') ?>

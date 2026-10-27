@@ -14,6 +14,33 @@ class Pengadaan extends CI_Controller
         $this->load->model('M_Pengadaan');
         $this->load->model('M_Auth');
     }
+    // penyamaan izin formulir pengadaan dan fungsi simpan
+
+    private function _cek_akses_pengajuan()
+    {
+        if (
+            !$this->session->userdata('logged_in')
+            || !$this->session->userdata('id_user')
+        ) {
+            redirect('auth');
+            exit;
+        }
+
+        $role = strtolower(
+            (string) $this->session->userdata('role')
+        );
+
+        if (!in_array($role, ['admin', 'laboran', 'guru'], true)) {
+            show_error(
+                'Anda tidak memiliki wewenang mengajukan pengadaan.',
+                403,
+                'Forbidden'
+            );
+            exit;
+        }
+    }
+
+
     // Tampilan Utama / Daftar Pengadaan
     public function index()
     {
@@ -129,19 +156,8 @@ class Pengadaan extends CI_Controller
     // Form Tambah Pengajuan
     public function tambah()
     {
-        // Cek session login terlebih dahulu
-        if (!$this->session->userdata('id_user')) {
-            redirect('auth');
-        }
-
-        $role_user = strtolower($this->session->userdata('role') ?? '');
-
-        // Blokir akses jika role Kepsek atau Siswa
-        if (in_array($role_user, ['kepsek', 'siswa'])) {
-            $this->session->set_flashdata('error', 'Akses ditolak! Role Anda tidak memiliki wewenang untuk mengajukan pengadaan.');
-            redirect('pengadaan');
-            return;
-        }
+        // fungsi pengecekan role baru
+        $this->_cek_akses_pengajuan();
 
         $data['title'] = 'Form Pengajuan Pengadaan Alat / BHP';
 
@@ -155,13 +171,20 @@ class Pengadaan extends CI_Controller
     // Proses Simpan
     public function simpan()
     {
+        $this->_cek_akses_pengajuan();
+
+        if ($this->input->method() !== 'post') {
+            show_error('Metode permintaan tidak diizinkan.', 405);
+            return;
+        }
         $data_insert = [
             'nama_item'        => $this->input->post('nama_item', true),
             'jumlah'           => (int)$this->input->post('jumlah', true),
             'satuan'           => $this->input->post('satuan', true),
             'estimasi_harga'   => (float)$this->input->post('estimasi_harga', true),
             'alasan_pengadaan' => $this->input->post('alasan_pengadaan', true),
-            'id_pengaju'       => $this->session->userdata('id_user') ?? 1,
+            // fix bug: pastikan id_pengaju diambil dari session user yang login
+            'id_pengaju'       => (int)$this->session->userdata('id_user'),
             'status_approval'  => 'Pending',
             'created_at'       => date('Y-m-d H:i:s')
         ];
@@ -219,13 +242,50 @@ class Pengadaan extends CI_Controller
         redirect(site_url('pengadaan/detail/' . $id_pengadaan));
     }
 
-    // Hapus
+    // Hapus fix terbaru
     public function hapus($id)
     {
-        $this->db->where('id_pengadaan', $id);
-        $this->db->delete('tb_pengadaan');
+        $role = strtolower(
+            (string) $this->session->userdata('role')
+        );
 
-        $this->session->set_flashdata('success', 'Data pengadaan berhasil dihapus!');
+        if (!in_array($role, ['admin', 'laboran', 'kepsek'], true)) {
+            show_error('Akses ditolak!', 403, 'Forbidden');
+            return;
+        }
+
+        if ($this->input->method() !== 'post') {
+            show_error('Gunakan formulir untuk menghapus data.', 405);
+            return;
+        }
+
+        $id = filter_var(
+            $id,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]]
+        );
+
+        if ($id === false) {
+            show_error('ID pengadaan tidak valid.', 400);
+            return;
+        }
+
+        $hapus = $this->db
+            ->where('id_pengadaan', $id)
+            ->delete('tb_pengadaan');
+
+        if ($hapus && $this->db->affected_rows() === 1) {
+            $this->session->set_flashdata(
+                'success',
+                'Data pengadaan berhasil dihapus!'
+            );
+        } else {
+            $this->session->set_flashdata(
+                'error',
+                'Pengadaan tidak ditemukan atau gagal dihapus.'
+            );
+        }
+
         redirect('pengadaan');
     }
 
