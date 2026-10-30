@@ -85,6 +85,12 @@
                 <i class="fa-solid fa-key text-teal-600"></i> Ganti Password
             </h3>
             <form action="<?= base_url('profile/change_password'); ?>" method="POST" class="space-y-4">
+                <!-- penambahan CSRF Token -->
+                <input
+                    type="hidden"
+                    name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                    value="<?= html_escape($this->security->get_csrf_hash()); ?>">
+                <input type="hidden" name="id_user" value="<?= $u['id_user']; ?>">
                 <div>
                     <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Password Saat Ini</label>
                     <input type="password" name="password_lama" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm" required>

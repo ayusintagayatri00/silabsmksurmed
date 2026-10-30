@@ -151,9 +151,28 @@ class Inventaris extends CI_Controller
         $this->form_validation->set_rules('kode_barcode', 'Kode Barcode', 'required|trim|is_unique[tb_inventaris.kode_barcode]');
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('kategori', 'Kategori', 'required|trim');
-        $this->form_validation->set_rules('stok', 'Stok', 'required|numeric');
+        //fix Validasi Stok agar tidak menerima nilai negatif
+        $this->form_validation->set_rules(
+            'stok',
+            'Stok',
+            'required|integer|greater_than_equal_to[0]',
+            [
+                'required' => 'Stok wajib diisi.',
+                'integer' => 'Stok harus berupa bilangan bulat.',
+                'greater_than_equal_to' => 'Stok tidak boleh negatif.'
+            ]
+        );
         $this->form_validation->set_rules('satuan', 'Satuan', 'required|trim');
-        $this->form_validation->set_rules('kondisi', 'Kondisi', 'required|trim');
+        // fix Validasi Kondisi Barang
+        $this->form_validation->set_rules(
+            'kondisi',
+            'Kondisi',
+            'required|trim|in_list[Baik,Rusak Ringan,Rusak Berat]',
+            [
+                'required' => 'Kondisi barang wajib dipilih.',
+                'in_list' => 'Pilihan kondisi barang tidak valid.'
+            ]
+        );
         $this->form_validation->set_rules('lokasi_penyimpanan', 'Lokasi Penyimpanan', 'required|trim');
 
         $jenis = $this->input->post('jenis', TRUE) ?? 'Alat';
@@ -255,9 +274,28 @@ class Inventaris extends CI_Controller
         $this->form_validation->set_rules('kode_barcode', 'Kode Barcode', 'required|trim' . $is_unique);
         $this->form_validation->set_rules('nama_barang', 'Nama Barang', 'required|trim');
         $this->form_validation->set_rules('kategori', 'Kategori', 'required|trim');
-        $this->form_validation->set_rules('stok', 'Stok', 'required|numeric');
+        // fix Validasi Stok agar tidak menerima nilai negatif
+        $this->form_validation->set_rules(
+            'stok',
+            'Stok',
+            'required|integer|greater_than_equal_to[0]',
+            [
+                'required' => 'Stok wajib diisi.',
+                'integer' => 'Stok harus berupa bilangan bulat.',
+                'greater_than_equal_to' => 'Stok tidak boleh negatif.'
+            ]
+        );
         $this->form_validation->set_rules('satuan', 'Satuan', 'required|trim');
-        $this->form_validation->set_rules('kondisi', 'Kondisi', 'required|trim');
+        // fix Validasi kondisi barang dengan daftar pilihan yang valid
+        $this->form_validation->set_rules(
+            'kondisi',
+            'Kondisi',
+            'required|trim|in_list[Baik,Rusak Ringan,Rusak Berat]',
+            [
+                'required' => 'Kondisi barang wajib dipilih.',
+                'in_list' => 'Pilihan kondisi barang tidak valid.'
+            ]
+        );
         $this->form_validation->set_rules('lokasi_penyimpanan', 'Lokasi Penyimpanan', 'required|trim');
 
         if ($this->form_validation->run() == FALSE) {

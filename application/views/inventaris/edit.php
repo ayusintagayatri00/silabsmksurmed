@@ -26,6 +26,11 @@
         <?php endif; ?>
 
         <form action="<?= site_url('inventaris/update'); ?>" method="POST" class="space-y-5">
+            <!-- penambahan CSRF Token -->
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
             <!-- Hidden Keys -->
             <input type="hidden" name="id_barang" value="<?= $barang->id_barang; ?>">
             <input type="hidden" name="jenis" value="<?= $jenis; ?>">
@@ -91,7 +96,8 @@
                     <label class="block text-xs font-bold text-slate-700 mb-2">
                         JUMLAH STOK <span class="text-rose-500">*</span>
                     </label>
-                    <input type="number" min="0" name="stok" value="<?= set_value('stok', $barang->stok); ?>" required
+                    <!-- Input type number with min=0 and step=1 to ensure only non-negative integers are entered -->
+                    <input type="number" min="0" step="1" name="stok" value="<?= set_value('stok', $barang->stok); ?>" required
                         class="w-full px-3.5 py-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition text-slate-800 font-semibold">
                 </div>
 

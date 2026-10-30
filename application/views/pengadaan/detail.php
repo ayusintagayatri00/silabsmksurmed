@@ -38,7 +38,8 @@
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 font-medium">Pengaju</p>
-                    <p class="font-medium text-slate-700 mt-1"><?= !empty($pengadaan['nama_pengaju']) ? $pengadaan['nama_pengaju'] : 'Administrator Lab'; ?></p>
+                    <!-- Tampilkan nama pengaju atau pesan jika tidak ditemukan -->
+                    <p class="font-medium text-slate-700 mt-1"><?= html_escape($pengadaan['nama_pengaju'] ?? 'Pengaju tidak ditemukan'); ?></p> 
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 font-medium">Tanggal Dibuat</p>
@@ -57,6 +58,11 @@
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 h-fit">
                 <h3 class="font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">Update Status Approval</h3>
                 <form action="<?= site_url('pengadaan/update_status'); ?>" method="POST" class="space-y-4">
+                    <!-- penambahan CSRF Token -->
+                    <input
+                        type="hidden"
+                        name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                        value="<?= html_escape($this->security->get_csrf_hash()); ?>">
                     <input type="hidden" name="id_pengadaan" value="<?= $pengadaan['id_pengadaan']; ?>">
 
                     <div>

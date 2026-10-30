@@ -36,8 +36,20 @@ class Auth extends CI_Controller
         $user = $this->M_Auth->get_user_by_username($username);
 
         if ($user) {
-            // Cek password (menggunakan password_verify atau plain text jika testing)
-            if (password_verify($password, $user->password) || $password === 'password123') {
+            // fix password universal
+            if (password_verify($password, $user->password)) {
+                //fix validasi status aktif user
+                if ((int) $user->status_aktif !== 1) {
+                $this->session->set_flashdata(
+                    'error',
+                    'Akun Anda tidak aktif. Hubungi administrator.'
+                );
+
+                redirect('auth');
+                return;
+            }
+
+            $this->session->sess_regenerate(TRUE);
 
                 // Set session
                 $session_data = array(

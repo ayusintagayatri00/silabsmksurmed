@@ -34,10 +34,13 @@
     <!-- Form Container -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-3xl">
         <form action="<?= base_url('peminjaman/update'); ?>" method="POST" class="space-y-5">
-
+            <!-- penambahan CSRF Token -->
+            <input
+                type="hidden"
+                name="<?= html_escape($this->security->get_csrf_token_name()); ?>"
+                value="<?= html_escape($this->security->get_csrf_hash()); ?>">
+            <!-- hapus pembacaan manual, sekarang ambil dari database -->
             <input type="hidden" name="id_peminjaman" value="<?= $peminjaman['id_peminjaman']; ?>">
-            <input type="hidden" name="id_barang_lama" value="<?= $peminjaman['id_barang']; ?>">
-            <input type="hidden" name="jumlah_lama" value="<?= $peminjaman['jumlah_pinjam']; ?>">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <!-- Kode Peminjaman -->
@@ -51,12 +54,18 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Status Peminjaman <span class="text-rose-500">*</span></label>
                     <select name="status" required class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                        <option value="Dipinjam" <?= ($peminjaman['status'] == 'Dipinjam') ? 'selected' : ''; ?>>Dipinjam</option>
-                        <option value="Dikembalikan" <?= ($peminjaman['status'] == 'Dikembalikan') ? 'selected' : ''; ?>>Dikembalikan</option>
-                        <option value="Terlambat" <?= ($peminjaman['status'] == 'Terlambat') ? 'selected' : ''; ?>>Terlambat</option>
+                       <!-- fix perbaiki jalur Edit → Simpan Perubahan. Tombol approval/pengembalian pada daftar menggunakan M_Peminjaman::proses_approval() yang terpisah; -->
+                       <?php 
+                       $pilihan_status = ['Pending','Disetujui','Ditolak','Dipinjam','Dikembalikan']; 
+                       ?>
+                        <?php foreach ($pilihan_status as $status): ?>
+                            <option value="<?= html_escape($status); ?>"
+                                <?= $peminjaman['status'] === $status ? 'selected' : ''; ?>>
+                                <?= html_escape($status); ?>
+                            </option>
+                        <?php endforeach; ?> 
                     </select>
                 </div>
-
                 <!-- Pilih Alat -->
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Alat Medis / Instrumen <span class="text-rose-500">*</span></label>

@@ -7,6 +7,13 @@ class User extends CI_Controller
     public function __construct()
     {
         parent::__construct();
+		//fix hak akses user bocor
+        if (!$this->session->userdata('logged_in')) {
+            redirect('auth');
+        }
+        if ($this->session->userdata('role') !== 'admin') {
+            show_error('Akses ditolak!', 403, 'Forbidden');
+        }
         $this->load->model('M_User');
         $this->load->library('form_validation');
     }
@@ -30,7 +37,23 @@ class User extends CI_Controller
         $this->form_validation->set_rules('username', 'Username', 'required|trim|is_unique[tb_users.username]');
         $this->form_validation->set_rules('nama_lengkap', 'Nama Lengkap', 'required|trim');
         $this->form_validation->set_rules('password', 'Password', 'required|min_length[5]');
-        $this->form_validation->set_rules('role', 'Role', 'required');
+        // perbaiki validasi role agar hanya menerima nilai yang valid sesuai daftar role yang ada
+        $this->form_validation->set_rules('role','Role','required|in_list[admin,laboran,guru,siswa,kepsek]');
+        // perbaiakan validasi untuk NIP/NIK/NIS agar tidak terlalu panjang dan tetap unik jika diperlukan
+        $this->form_validation->set_rules(
+            'nip_nik_user',
+            'NIP / NIK / NIS',
+            'required|trim|max_length[100]'
+        );
+
+        $this->form_validation->set_rules(
+            'email',
+            'Email',
+            'required|trim|valid_email|max_length[100]|is_unique[tb_users.email]',
+            [
+                'is_unique' => 'Email sudah digunakan oleh pengguna lain.'
+            ]
+        );
 
         if ($this->form_validation->run() == FALSE) {
             $this->session->set_flashdata('error', validation_errors());
@@ -38,14 +61,46 @@ class User extends CI_Controller
         } else {
             $data = [
                 'username'     => $this->input->post('username', true),
+                // Perbaikan: Gunakan trim untuk menghapus spasi di awal dan akhir input NIP/NIK/NIS
+                'nip_nik_user' => trim(
+                    (string) $this->input->post('nip_nik_user', TRUE)
+                ),
+                'email' => trim(
+                    (string) $this->input->post('email', TRUE)
+                ),
                 'nama_lengkap' => $this->input->post('nama_lengkap', true),
                 'password'     => password_hash($this->input->post('password'), PASSWORD_DEFAULT), // Enkripsi password
                 'role'         => $this->input->post('role', true),
                 'created_at'   => date('Y-m-d H:i:s')
             ];
 
-            $this->M_User->insert_user($data);
-            $this->session->set_flashdata('success', 'Data user berhasil ditambahkan!');
+            // penambahan blok try-catch untuk menangani error database saat insert user
+
+            $db_debug_lama = $this->db->db_debug;
+            $this->db->db_debug = false;
+
+            try {
+                $tersimpan = $this->M_User->insert_user($data);
+                $error_db = $this->db->error();
+            } finally {
+                $this->db->db_debug = $db_debug_lama;
+            }
+
+            if (!$tersimpan) {
+                $pesan = (int) $error_db['code'] === 1062
+                    ? 'Username atau email sudah digunakan.'
+                    : 'Data pengguna gagal disimpan.';
+
+                $this->session->set_flashdata('error', $pesan);
+                redirect('user');
+                return;
+            }
+
+            $this->session->set_flashdata(
+                'success',
+                'Data pengguna berhasil ditambahkan!'
+            );
+
             redirect('user');
         }
     }
